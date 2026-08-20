@@ -1,0 +1,11 @@
+system:
+  n_antennas: 64
+  n_users: 8
+  bandwidth_hz: 20.0e6
+  max_transmit_power_w: 10.0
+  circuit_power_w: 80.0
+  channel_model: rayleigh
+simulation:
+  snr_db: [0, 5, 10, 15, 20]
+  monte_carlo_runs: 100
+  random_seed: 42

@@ -1,0 +1,4 @@
+mimo:
+  detector: mmse
+  precoder: mrt
+  normalization: total_power

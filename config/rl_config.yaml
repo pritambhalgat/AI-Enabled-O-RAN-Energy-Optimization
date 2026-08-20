@@ -1,0 +1,7 @@
+rl:
+  state: [snr_db, traffic_load, user_count, active_ru_ratio]
+  action: [power_scale]
+  reward:
+    throughput_weight: 1.0
+    energy_weight: 0.5
+    qos_weight: 1.0
