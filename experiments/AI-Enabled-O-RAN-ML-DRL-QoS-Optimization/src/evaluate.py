@@ -25,8 +25,10 @@ def main():
                 traffic=np.clip(tn*ys+ym,.05,1.)
                 rmin=c.min_rate_base_bps+(c.min_rate_max_bps-c.min_rate_base_bps)*traffic
                 state=make_state(H,traffic,prev,c)
-                raw=agent.mu(torch.tensor(state).unsqueeze(0)) # deterministic PPO action
-                pppo=decode_action(raw,c.n_users,c.p_max_w).numpy().ravel()
+                # Use the actor's mean from the complete network, not the final
+                # linear layer in isolation. This is the deterministic PPO policy.
+                mu,_,_=agent(torch.tensor(state,dtype=torch.float32).unsqueeze(0))
+                pppo=decode_action(mu,c.n_users,c.p_max_w).numpy().ravel()
             eq=np.ones(c.n_users)*c.p_max_w/c.n_users
             gains=np.sum(np.abs(H)**2,axis=0)
             heur=project_power(.05/c.n_users+.95*gains/(gains.sum()+1e-30),c.p_max_w,c.p_max_w)

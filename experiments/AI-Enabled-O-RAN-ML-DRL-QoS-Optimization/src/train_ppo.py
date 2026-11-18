@@ -21,12 +21,14 @@ def main():
             traffic=np.clip(tn*ys+ym,.05,1.)
             H=channel_realization(c.n_antennas,c.n_users,rng)
             rmin=c.min_rate_base_bps+(c.min_rate_max_bps-c.min_rate_base_bps)*traffic
-            state=make_state(H,traffic,prev,c); st=torch.tensor(state).unsqueeze(0)
+            state=make_state(H,traffic,prev,c); st=torch.tensor(state,dtype=torch.float32).unsqueeze(0)
             with torch.no_grad():
                 raw,lp,val=agent.act(st); p=decode_action(raw,c.n_users,c.p_max_w).squeeze(0).numpy()
             met=mrc_metrics(H,p,c,rmin); rew=reward(met,p,prev,c)
             S.append(state); A.append(raw.squeeze(0).numpy()); LP.append(lp.item()); V.append(val.item())
             RR.append(rew); DD.append(0.); prev=p; idx+=1
+        # Each finite-horizon rollout is an episode; prevent GAE leaking across resets.
+        DD[-1]=1.
         S=torch.tensor(np.asarray(S),dtype=torch.float32); A=torch.tensor(np.asarray(A),dtype=torch.float32)
         oldlp=torch.tensor(LP,dtype=torch.float32); values=torch.tensor(V,dtype=torch.float32)
         R=torch.tensor(RR,dtype=torch.float32); D=torch.tensor(DD,dtype=torch.float32)
