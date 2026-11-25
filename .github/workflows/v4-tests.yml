@@ -1,0 +1,32 @@
+name: V4 package tests
+
+on:
+  push:
+    paths:
+      - 'source_packages/O-RAN-Version4-Dual-Uncertainty-QoS-Safe-DRL.tar.gz'
+      - '.github/workflows/v4-tests.yml'
+  pull_request:
+    paths:
+      - 'source_packages/O-RAN-Version4-Dual-Uncertainty-QoS-Safe-DRL.tar.gz'
+      - '.github/workflows/v4-tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Extract V4 source package
+        run: tar -xzf source_packages/O-RAN-Version4-Dual-Uncertainty-QoS-Safe-DRL.tar.gz -C /tmp
+      - name: Install dependencies
+        working-directory: /tmp/AI-Enabled-O-RAN-ML-DRL-QoS-Optimization-Version4
+        run: python -m pip install -r requirements.txt
+      - name: Compile source
+        working-directory: /tmp/AI-Enabled-O-RAN-ML-DRL-QoS-Optimization-Version4
+        run: python -m compileall -q config.py src tests run_all.py
+      - name: Run unit tests
+        working-directory: /tmp/AI-Enabled-O-RAN-ML-DRL-QoS-Optimization-Version4
+        run: python -m pytest -q
