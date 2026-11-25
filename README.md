@@ -1,55 +1,54 @@
 # AI-Enabled O-RAN Energy Optimization
 
-This repository contains four staged research versions.
+Research simulation project exploring AI-assisted uplink radio-resource allocation, receiver-aware QoS and energy-efficiency trade-offs.
 
-## Version 1 — Baseline
-ORAN_Energy_Optimization.ipynb: fixed equal power vs channel-aware heuristic,
-Rayleigh fading and basic throughput/energy-efficiency calculations.
+## Project evolution
 
-## Version 2 — PyTorch ML + PPO
-ORAN_Energy_Optimization_Version2.ipynb and the code in
-experiments/AI-Enabled-O-RAN-ML-DRL-QoS-Optimization/. The package includes
-traffic MLP, PPO power allocation, MRC multi-user interference, traffic-based
-QoS targets and conventional allocation comparisons.
+### Version 1 — Baseline simulation
+`ORAN_Energy_Optimization.ipynb`: fixed/equal power allocation versus a channel-aware heuristic using a basic Rayleigh-fading model.
 
-## Version 3 — Receiver-aware QoS-constrained ML/DRL
-ORAN_Energy_Optimization_Version3.ipynb and package in
-experiments/AI-Enabled-O-RAN-ML-DRL-QoS-Optimization-Version3/.
-V3 adds receiver-specific MRC/ZF/MMSE SINR, separate PPO policies, numerical
-QoS projection attempts, multi-seed comparisons and confidence intervals.
+### Version 2 — ML and PPO resource allocation
+`ORAN_Energy_Optimization_Version2.ipynb` and `experiments/AI-Enabled-O-RAN-ML-DRL-QoS-Optimization/`: synthetic traffic prediction, PPO-based power allocation, MRC multi-user interference and traffic-dependent QoS targets.
 
-## Version 4 — Dual-calibrated QoS safety shield (research candidate)
-ORAN_Energy_Optimization_Version4.ipynb.
+### Version 3 — Receiver-aware QoS-constrained ML/DRL
+`ORAN_Energy_Optimization_Version3.ipynb` and `experiments/AI-Enabled-O-RAN-ML-DRL-QoS-Optimization-Version3/`: MRC/ZF/MMSE post-combining SINR, receiver-specific PPO policies, SLSQP QoS projection attempts and multi-seed evaluation.
 
-V4 investigates a two-sided uncertainty-aware safety layer around PPO:
-1. One-sided split-conformal upper bounds on predicted user traffic.
-2. Receiver-specific lower-tail rate bounds under imperfect CSI, calibrated
-   using an independent sample set and actions from the trained policies.
-3. A nearest-action SLSQP projection that attempts to satisfy the conservative
-   per-user rate targets and the total transmit-power constraint.
-4. Evaluation of raw PPO, an uncalibrated posterior shield and the
-   dual-calibrated shield, including nominal and distribution-shift tests.
+### Version 4 — Dual-uncertainty QoS safety-shield research prototype
+- Notebook: [`ORAN_Energy_Optimization_Version4.ipynb`](ORAN_Energy_Optimization_Version4.ipynb)
+- Complete source archive: [`O-RAN-Version4-Dual-Uncertainty-QoS-Safe-DRL.tar.gz`](source_packages/O-RAN-Version4-Dual-Uncertainty-QoS-Safe-DRL.tar.gz)
+- Research rationale: [`docs/V4_RESEARCH_NOVELTY.md`](docs/V4_RESEARCH_NOVELTY.md)
+- Validation report: [`docs/V4_VALIDATION_REPORT.md`](docs/V4_VALIDATION_REPORT.md)
 
-**This is a candidate research contribution, not a verified first-of-its-kind
-claim or a demonstrated safety guarantee.** The local SLSQP problem is
-non-convex; it can fail. Conformal marginal coverage depends on calibration
-assumptions and may degrade under distribution shift or policy-induced
-distribution change. A systematic literature review and research-grade
-experiments are required.
+V4 investigates conservative demand targets, a conditional Gaussian channel posterior under imperfect CSI, receiver-specific lower-tail rates and an SLSQP nearest-action filter for PPO power commands. The posterior is derived from the simulator's channel prior and CSI-error covariance. Calibration uses one block-maximum residual per independent channel realization across a predeclared candidate-action family, rather than treating dependent actions on the same channel as independent samples.
 
-### Version 4 package
-Download the complete source package from the accompanying ChatGPT deliverable:
-`O-RAN-Version4-Dual-Uncertainty-QoS-Safe-DRL.zip`.
-The bundle contains the modular Python implementation, tests, methodology and
-validation report. Extract it, enter the `O-RAN-Version4` directory and run:
+**V4 is a research candidate, not a demonstrated safety guarantee or a verified first-of-its-kind contribution.** Calibration does not guarantee coverage for arbitrary shield-projected actions, adaptive policy changes or distribution shifts. SLSQP is a local solver and may fail. Its equal-power fallback preserves the power budget only; QoS remains unverified.
+
+## Reproduce Version 4
+
+From the repository root, extract the committed archive under `experiments/`:
 
 ```bash
+mkdir -p experiments
+tar -xzf source_packages/O-RAN-Version4-Dual-Uncertainty-QoS-Safe-DRL.tar.gz -C experiments
+cd experiments/AI-Enabled-O-RAN-ML-DRL-QoS-Optimization-Version4
 python -m pip install -r requirements.txt
+python -m compileall -q config.py src tests run_all.py
 python -m pytest -q
-python run_all.py --seeds 5 --blocks 50
 ```
 
-The included smoke validation passed 4 unit tests, but the full PPO agents and
-multi-seed study still need to be run. The MLP did not beat persistence on the
-reported synthetic split. No measured RAN energy savings, PPO superiority,
-live A1/E2 interface or production xApp deployment is claimed.
+A deliberately small software-integration run (not suitable for research claims):
+
+```bash
+python run_all.py --seeds 2 --blocks 3 --traffic-epochs 2 \
+  --calibration-samples 20 --ppo-episodes 2 --ppo-steps 3
+```
+
+## Scope and limitations
+
+- Synthetic traffic and a single-cell narrowband uplink are used; no operator traces or live O-RAN interface are present.
+- The link budget uses an illustrative 3.5 GHz carrier, 20 MHz bandwidth and thermal-noise-plus-noise-figure assumption. The fixed circuit-power value is illustrative, not measured hardware consumption.
+- The demand MLP has not demonstrated reliable improvement over persistence in the reported smoke run.
+- No measured RAN energy savings, PPO superiority, production xApp/rApp, live A1/E2 integration, deterministic QoS guarantee or formal all-user safety guarantee is claimed.
+- Further work requires larger independent training/calibration/test sets, constrained-RL and optimization baselines, runtime analysis, deployment-oriented power-model validation and a systematic literature review.
+
+The V1–V3 notebooks and experiment packages are retained to show the staged development history. V4 is the most complete implementation, but its current validation remains at software-smoke-test level.
