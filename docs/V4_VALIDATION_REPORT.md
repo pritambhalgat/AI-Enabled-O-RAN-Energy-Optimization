@@ -1,20 +1,41 @@
-# Version 4 validation report — software smoke tests
+# Version 4 validation report — corrected software integration smoke test
 
-- Python syntax compilation passed for all 13 Python source files.
-- Unit tests: 4 passed.
-- Nominal end-to-end pipeline completed: demand MLP, three receiver-specific PPO agents, action-matched channel calibration and evaluation.
-- Stress-test evaluation completed with CSI error multiplier 1.5 and traffic-surge probability 0.2.
-- Smoke settings: 2 PPO episodes × 5 steps per receiver, 12 channel-calibration samples and 2 test seeds × 2 blocks.
-- Separate 20-epoch demand-model run: MLP held-out MAE 0.031085; persistence MAE 0.029443. The MLP did not beat persistence.
-- One-sided demand upper-bound empirical coverage ranged from 0.9407 to 0.9620 across users in that split.
-- Tiny nominal channel lower-rate-bound check: mean coverage 93.75%, minimum 50%; only four test samples per user/receiver, so this is not a reliable coverage estimate.
+## Code and test checks
+- `python -m compileall -q config.py src tests run_all.py`: passed.
+- Unit tests: **6 passed**.
+- Tests cover revised receiver-rate calculations, conditional Gaussian posterior shape and positive-semidefinite covariance, posterior rate-quantile output, conformal quantile handling, block-maximum calibration score construction and power-budget handling.
 
-PPO agents are severely under-trained in the smoke run. Some projections failed. SLSQP is local on non-convex constraints; its fallback respects the power budget only and is not guaranteed to meet QoS.
+## End-to-end integration run
+The revised source completed one deliberately small integration run:
+- Demand model: 2 training epochs.
+- Each MRC, ZF and MMSE PPO agent: 2 episodes × 3 steps.
+- Channel calibration: 20 independent channel realizations per receiver.
+- Evaluation: 2 test seeds × 3 blocks per seed.
+- The pipeline produced per-seed metrics, summary files, traffic-bound coverage and method-specific channel lower-bound coverage.
 
-Before research claims:
-- Train each receiver policy with multiple independent training seeds.
-- Use disjoint train, calibration, validation and test data.
-- Evaluate at least 10 test seeds and hundreds/thousands of channel blocks.
-- Report per-user demand and rate-bound coverage, QoS violation probabilities, shortfall, shield failure, solver runtime, throughput, EE, fairness and power.
-- Stress test CSI error, traffic bursts, shadowing, user geometry and heavy-tailed errors.
-- Do not claim deterministic or simultaneous all-user safety, PPO superiority, live O-RAN deployment or measured RAN energy savings.
+The demand model MAE in this tiny run was **0.035915**, compared with **0.029443** for persistence. The MLP did not beat persistence. Block-maximum empirical calibration coverage on the 20 calibration units was 100% for the user/receiver pairs in this run. At this sample size, the 95% finite-sample quantile is the sample maximum; this is not evidence of 95% out-of-sample coverage.
+
+The two-seed, six-block evaluation is an integration check only. It is too small to support performance comparisons; its confidence intervals are not research-grade. Some shield projections failed, as expected for a local solver on non-convex constraints. Solver success is not proof of global feasibility or robust QoS satisfaction.
+
+## Corrections included
+1. Replaced heuristic CSI perturbations with the conditional complex-Gaussian posterior implied by the channel prior and CSI-error covariance.
+2. Replaced mean-normalized path loss with a close-in 1 m path-loss model at 3.5 GHz and log-normal shadowing; updated noise to an approximately -94 dBm thermal-noise-plus-noise-figure assumption over 20 MHz.
+3. Changed channel calibration to one component-wise block-maximum score vector per independent channel realization and receiver, over four predeclared action families.
+4. Added held-out lower-bound coverage diagnostics separately for evaluated action methods.
+5. Clarified that previous-command state matches unshielded PPO training; feeding shielded/applied power back into the state requires retraining.
+6. Published the complete source archive and added CI to extract, compile and test that archive.
+
+## Not established
+- The demand MLP has not demonstrated reliable improvement over persistence.
+- Calibration does not guarantee coverage for arbitrary projected actions, adaptive policies, distribution shifts or simultaneous all-user coverage.
+- The shield is not guaranteed feasible; its fallback preserves the power budget only.
+- PPO superiority, positive energy savings, measured hardware power reduction, live O-RAN operation, A1/E2 integration and production xApp/rApp deployment are not established.
+
+## Required before research or publication claims
+- Use separate independent training, calibration, validation and test trajectories/seeds; quantify variation across multiple training seeds.
+- Evaluate at least 10–20 held-out test seeds and hundreds or thousands of channel blocks per scenario.
+- Increase calibration units and report per-user/receiver coverage with uncertainty; assess shield-selected actions.
+- Compare persistence, equal allocation, channel heuristic, raw PPO, uncalibrated shield, calibrated shield, constrained PPO/Lagrangian approaches and optimization baselines.
+- Report QoS violation probability, shortfall, solver failure/runtime, throughput, assumed energy efficiency, fairness, transmit power and robustness under CSI/traffic/path-loss shifts.
+- Validate link budget and circuit-power assumptions against a target deployment, or retain simulation-only labels.
+- Complete a systematic literature review before claiming novelty.
